@@ -5,10 +5,20 @@ type Player = Phaser.Physics.Arcade.Sprite;
 
 type CursorKeys = Phaser.Types.Input.Keyboard.CursorKeys;
 
+// Define constants
+const GAME_WIDTH = 400;
+const GAME_HEIGHT = 600;
+const MAP_HEIGHT = 600;
+const PLATFORM_COUNT = 74;
+const MIN_DISTANCE_Y = 50;
+const MAX_DISTANCE_Y = 100;
+const MIN_DISTANCE_X = 50;
+const MAX_DISTANCE_X = 200;
+
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    width: 400,
-    height: 600,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     physics: {
         default: 'arcade',
         arcade: {
@@ -31,24 +41,10 @@ const game = new Phaser.Game(config);
 
 function preload(this: Phaser.Scene): void {
     this.load.image('background', '/assests/background.jpg');
-    this.load.image('platform', './assests/platform.jpg');
-    this.load.image('penguin', './assests/penguinSpriteIdle.png');
+    this.load.image('platform', '/assests/platform.jpg');
+    this.load.image('platform2', '/assests/platform.png');
+    this.load.image('penguin', '/assests/penguinSpriteIdle.png');
 }
-
-// function preload(this: Phaser.Scene): void {
-//     this.load.image('background', '/assets/background.jpg')
-//         .on('loaderror', (file: Phaser.Loader.File) => {
-//             console.error('Failed to load image:', file.key);
-//         });
-//     this.load.image('platform', '/assets/platform.png')
-//         .on('loaderror', (file: Phaser.Loader.File) => {
-//             console.error('Failed to load image:', file.key);
-//         });
-//     this.load.image('penguin', '/assets/penguinSpriteIdle.png')
-//         .on('loaderror', (file: Phaser.Loader.File) => {
-//             console.error('Failed to load image:', file.key);
-//         });
-// }
 
 function create(this: Phaser.Scene): void {
     this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'background').setOrigin(0.5, 0.5);
@@ -56,18 +52,19 @@ function create(this: Phaser.Scene): void {
     platforms = this.physics.add.staticGroup();
     generatePlatforms(this);
 
-    player = this.physics.add.sprite(200, 500, 'penguin');
+    player = this.physics.add.sprite(200, MAP_HEIGHT-200, 'penguin'); // Start the player near the bottom of the map
     player.setCollideWorldBounds(true);
-    player.setBounce(0.3);
+    player.setBounce(0.0);
 
     this.physics.add.collider(player, platforms);
 
-    cursors = this.input?.keyboard?.createCursorKeys() as CursorKeys;
+    cursors = this.input?.keyboard?.createCursorKeys() as CursorKeys;    
 
-    // Enable camera follow
-    this.cameras.main.startFollow(player, true, 0.05, 0.05);
-    this.cameras.main.setLerp(0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, 400, 600);
+    this.cameras.main.startFollow(player, true);
+    this.cameras.main.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Match the camera bounds to the world bounds
+    this.physics.world.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Extend the world bounds to allow upward movement
+
+    //this.cameras.main.scrollY = MAP_HEIGHT - this.cameras.main.height; // Set the initial camera position to the bottom of the map
 }
 
 function update(this: Phaser.Scene): void {
@@ -90,20 +87,24 @@ function update(this: Phaser.Scene): void {
 }
 
 function generatePlatforms(scene: Phaser.Scene): void {
-    const platformCount = 10;
-    const minDistanceY = 50;
-    const maxDistanceY = 100;
-    const minDistanceX = 50;
-    const maxDistanceX = 200;
 
-    let lastPlatformY = 600;
+    // Create the first platform at a fixed position
+    const firstPlatform = platforms.create(200, MAP_HEIGHT-100, 'platform2');
+    firstPlatform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
+    firstPlatform.refreshBody(); // Refresh the physics body to match the new size
+
+    const lastPlatform = platforms.create(200, MAP_HEIGHT - (MAP_HEIGHT - 100), 'platform2');
+    lastPlatform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
+    lastPlatform.refreshBody(); // Refresh the physics body to match the new size
+
+    let lastPlatformY = MAP_HEIGHT-100;
     let lastPlatformX = 200;
 
-    for (let i = 0; i < platformCount; i++) {
-        const posY = lastPlatformY - Phaser.Math.Between(minDistanceY, maxDistanceY);
+    for (let i = 1; i < PLATFORM_COUNT; i++) {
+        const posY = lastPlatformY - Phaser.Math.Between(MIN_DISTANCE_Y, MAX_DISTANCE_Y);
         const posX = Phaser.Math.Between(
-            Math.max(50, lastPlatformX - maxDistanceX),
-            Math.min(350, lastPlatformX + maxDistanceX)
+            Math.max(50, lastPlatformX - MAX_DISTANCE_X),
+            Math.min(350, lastPlatformX + MAX_DISTANCE_X)
         );
 
         const platform = platforms.create(posX, posY, 'platform');
