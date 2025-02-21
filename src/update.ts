@@ -34,8 +34,7 @@ const handlePlayerMovement = (cursors: CursorKeys, player: Player) => {
     player.setVelocityX(0);
   }
 
-  if (cursors.space?.isDown) {
-    //|| cursors.up?.isDown) && player?.body?.blocked.down) {
+  if ((cursors.space?.isDown || cursors.up?.isDown) && player?.body?.blocked.down) {
     player.setVelocityY(-250);
     state.hasJumped = true;
   }
