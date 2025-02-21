@@ -1,6 +1,6 @@
 export const GAME_WIDTH = 400;
 export const GAME_HEIGHT = 600;
-export const MAP_HEIGHT = 600;
+export const MAP_HEIGHT = 1200;
 export const MAX_SCORE = MAP_HEIGHT / 10;
 
 export type Platforms = Phaser.Physics.Arcade.StaticGroup;

@@ -35,7 +35,7 @@ export function create(this: Scene): void {
 }
 
 const initPlayer = (scene: Scene) => {
-  const player = scene.physics.add.sprite(200, MAP_HEIGHT - 40, "penguin");
+  const player = scene.physics.add.sprite(200, MAP_HEIGHT - 90, "penguin");
   player.setCollideWorldBounds(true);
   player.setBounce(0.0);
 
@@ -44,29 +44,43 @@ const initPlayer = (scene: Scene) => {
 
 const initPlatforms = (scene: Scene) => {
   const platforms = scene.physics.add.staticGroup();
+  
+  // Create a seeded RNG
+  const rng = new Phaser.Math.RandomDataGenerator(['penguin-jump-v1']);
 
-  // Create the first platform at a fixed position
-  const firstPlatform = platforms.create(200, MAP_HEIGHT - 10, "platform2");
-  firstPlatform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
-  firstPlatform.refreshBody(); // Refresh the physics body to match the new size
+  // Constants for platform generation
+  const MIN_DISTANCE_Y = 60;
+  const MAX_DISTANCE_Y = 100;
+  const MIN_DISTANCE_X = 50;
+  const MAX_DISTANCE_X = 150;
+  const PLATFORM_COUNT = 74;
+  const PLATFORM_WIDTH = 100;
+  
+  // Create the starting platform
+  const firstPlatform = platforms.create(200, MAP_HEIGHT - 50, "platform2");
+  firstPlatform.setDisplaySize(PLATFORM_WIDTH, 20);
+  firstPlatform.refreshBody();
 
-  const lastPlatform = platforms.create(200, MAP_HEIGHT - (MAP_HEIGHT - 100), "platform2");
-  lastPlatform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
-  lastPlatform.refreshBody(); // Refresh the physics body to match the new size
+  let lastX = 200;
+  let lastY = MAP_HEIGHT - 50;
 
-  // Generate platforms with static positions
-  const fixedPositions = [
-    { x: 250, y: 500 },
-    { x: 100, y: 400 },
-    { x: 250, y: 300 },
-    { x: 350, y: 200 },
-  ];
+  // Generate platforms with seeded random positions
+  for (let i = 1; i < PLATFORM_COUNT; i++) {
+    const y = lastY - rng.between(MIN_DISTANCE_Y, MAX_DISTANCE_Y);
+    
+    const minX = Math.max(PLATFORM_WIDTH/2, lastX - MAX_DISTANCE_X);
+    const maxX = Math.min(GAME_WIDTH - PLATFORM_WIDTH/2, lastX + MAX_DISTANCE_X);
+    const x = rng.between(minX, maxX);
 
-  fixedPositions.forEach((pos) => {
-    const platform = platforms.create(pos.x, pos.y, "platform");
-    platform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
-    platform.refreshBody(); // Refresh the physics body to match the new size
-  });
+    const platform = platforms.create(x, y, "platform");
+    
+    const width = Math.max(50, PLATFORM_WIDTH - (i * 0.5));
+    platform.setDisplaySize(width, 20);
+    platform.refreshBody();
+
+    lastX = x;
+    lastY = y;
+  }
 
   return platforms;
 };
@@ -81,25 +95,35 @@ function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
     dragY: 0,
   });
 
-  const movingPlatformRedPositions = [
-    { x: 150, y: 450 },
-    { x: 250, y: 350 },
-  ];
+  // Create a seeded RNG with a different seed for moving platforms
+  const rng = new Phaser.Math.RandomDataGenerator(['penguin-jump-moving-v4']);
 
-  movingPlatformRedPositions.forEach((pos) => {
-    const movingPlatformRed = scene.physics.add.image(pos.x, pos.y, "platformRed");
-    movingPlatformRed.setDisplaySize(10, 100);
-    movingPlatformRed.refreshBody();
+  // Constants for moving platform generation
+  const PLATFORM_COUNT = MAP_HEIGHT / 200;
+  const MIN_HEIGHT = 100;
+  const MAX_HEIGHT = MAP_HEIGHT - 100;
+  const PLATFORM_WIDTH = 70;
+
+  for (let i = 0; i < PLATFORM_COUNT; i++) {
+    const y = rng.between(MIN_HEIGHT, MAX_HEIGHT);
+    const x = rng.between(PLATFORM_WIDTH/2, GAME_WIDTH - PLATFORM_WIDTH/2);
+
+    const movingPlatform = scene.physics.add.image(x, y, "platformRed");
+    movingPlatform.setDisplaySize(PLATFORM_WIDTH, 20);
+    movingPlatform.refreshBody();
+    movingPlatform.setImmovable(true);
+
     scene.tweens.add({
-      targets: movingPlatformRed,
-      x: pos.x + GAME_WIDTH / 2,
+      targets: movingPlatform,
+      x: x + GAME_WIDTH/3,
       ease: "Linear",
-      duration: 3000,
+      duration: 2000,
       yoyo: true,
-      repeat: -1,
+      repeat: -1
     });
-    movingPlatforms.add(movingPlatformRed);
-  });
+
+    movingPlatforms.add(movingPlatform);
+  }
 
   return movingPlatforms;
 }

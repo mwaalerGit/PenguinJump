@@ -8,7 +8,6 @@ export function update(this: Scene): void {
   handlePlayerMovement(cursors, player);
 
   adjustCameraPosition(this, player);
-  console.log(hasJumped);
 
   if (hasJumped) {
     const bottomPlatform = state.bottomPlatformGroup.getChildren()[0] as Phaser.Physics.Arcade.Sprite;
