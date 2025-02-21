@@ -2,6 +2,37 @@ import { Scene } from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT } from "./utils";
 import { initState, state } from "./state";
 
+export function create(this: Scene): void {
+  // Add background image
+  this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, "background").setOrigin(0.5, 0.5);
+
+  initState({
+    platformGroup: initPlatforms(this),
+    movingPlatformGroup: initMovingPlatforms(this),
+    player: initPlayer(this),
+    cursors: this.input.keyboard!.createCursorKeys(),
+    scoreText: this.add.text(16, 16, "Score: 0", { fontSize: "32px", color: "#000" }).setScrollFactor(0),
+    bottomPlatformGroup: createBottomPlatform(this),
+    score: 0,
+  });
+
+  addCollisions(this);
+
+  this.cameras.main.startFollow(state.player, true); // Set camera to follow the player
+  this.cameras.main.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Match the camera bounds to the world bounds
+  this.physics.world.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Extend the world bounds to allow upward movement
+
+  // Add animations
+  if (!this.anims.get("walk")) {
+    this.anims.create({
+      key: "walk",
+      frames: this.anims.generateFrameNumbers("penguinWalk", { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+  }
+}
+
 const initPlayer = (scene: Scene) => {
   const player = scene.physics.add.sprite(200, MAP_HEIGHT - 40, "penguin");
   player.setCollideWorldBounds(true);
@@ -99,34 +130,3 @@ const addCollisions = (scene: Scene) => {
     });
   });
 };
-
-export function create(this: Scene): void {
-  // Add background image
-  this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, "background").setOrigin(0.5, 0.5);
-
-  initState({
-    platformGroup: initPlatforms(this),
-    movingPlatformGroup: initMovingPlatforms(this),
-    player: initPlayer(this),
-    cursors: this.input.keyboard!.createCursorKeys(),
-    scoreText: this.add.text(16, 16, "Score: 0", { fontSize: "32px", color: "#000" }).setScrollFactor(0),
-    bottomPlatformGroup: createBottomPlatform(this),
-    score: 0,
-  });
-
-  addCollisions(this);
-
-  this.cameras.main.startFollow(state.player, true); // Set camera to follow the player
-  this.cameras.main.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Match the camera bounds to the world bounds
-  this.physics.world.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Extend the world bounds to allow upward movement
-
-  // Add animations
-  if (!this.anims.get("walk")) {
-    this.anims.create({
-      key: "walk",
-      frames: this.anims.generateFrameNumbers("penguinWalk", { start: 0, end: 3 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-  }
-}
