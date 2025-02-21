@@ -81,6 +81,25 @@ const createBottomPlatform = (scene: Scene) => {
   return bottomPlatformGroup;
 };
 
+const addCollisions = (scene: Scene) => {
+  scene.physics.add.collider(state.player, state.platformGroup);
+  scene.physics.add.collider(state.player, state.movingPlatformGroup);
+
+  // Add collision between player and lava
+  scene.physics.add.collider(state.player, state.bottomPlatformGroup, () => {
+    scene.physics.pause(); // Pause the physics engine
+    state.player.setTint(0xff0000); // Change the player's color to red
+    state.player.scale = 0.75;
+    // Add a restart button
+    const restartButton = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Restart", { fontSize: "32px", color: "#000" });
+    restartButton.setOrigin(0.5, 0.5);
+    restartButton.setInteractive(); // Allow the button to be clicked
+    restartButton.on("pointerdown", () => {
+      scene.scene.restart();
+    });
+  });
+};
+
 export function create(this: Scene): void {
   // Add background image
   this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, "background").setOrigin(0.5, 0.5);
@@ -95,25 +114,9 @@ export function create(this: Scene): void {
     score: 0,
   });
 
-  this.physics.add.collider(state.player, state.platformGroup);
-  this.physics.add.collider(state.player, state.movingPlatformGroup);
+  addCollisions(this);
 
-  // Add collision between player and lava
-  this.physics.add.collider(state.player, state.bottomPlatformGroup, () => {
-    this.physics.pause(); // Pause the physics engine
-    state.player.setTint(0xff0000); // Change the player's color to red
-    state.player.scale = 0.75;
-    // Add a restart button
-    const restartButton = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Restart", { fontSize: "32px", color: "#000" });
-    restartButton.setOrigin(0.5, 0.5);
-    restartButton.setInteractive(); // Allow the button to be clicked
-    restartButton.on("pointerdown", () => {
-      this.scene.restart(); // Restart the scene
-    });
-  });
-
-  // Set camera to follow the player
-  this.cameras.main.startFollow(state.player, true);
+  this.cameras.main.startFollow(state.player, true); // Set camera to follow the player
   this.cameras.main.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Match the camera bounds to the world bounds
   this.physics.world.setBounds(0, 0, GAME_WIDTH, MAP_HEIGHT); // Extend the world bounds to allow upward movement
 
@@ -126,9 +129,4 @@ export function create(this: Scene): void {
       repeat: -1,
     });
   }
-
-  // Add collision detection between the player and the moving platforms
-  // movingPlatforms.forEach(movingPlatform => {
-  //     this.physics.add.collider(player, movingPlatform);
-  // });
 }
