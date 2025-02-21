@@ -6,9 +6,9 @@ export type GameState = {
   platformGroup: PlatformGroup;
   movingPlatformGroup: MovingPlatformGroup;
   bottomPlatformGroup: PlatformGroup;
-  bottomPlatform: Player;
   scoreText: ScoreText;
   score: number;
+  hasJumped: boolean;
 };
 
 export let state: GameState;
