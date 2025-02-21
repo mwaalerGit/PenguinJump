@@ -5,7 +5,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from "./utils";
 import { update } from "./update";
 
 new Phaser.Game({
-  type: Phaser.AUTO,
+  type: Phaser.WEBGL,
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   physics: {

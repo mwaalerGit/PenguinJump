@@ -3,8 +3,48 @@ import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT } from "./utils";
 import { initState, state } from "./state";
 
 export function create(this: Scene): void {
-  // Add background image
-  this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, "background").setOrigin(0.5, 0.5);
+  const fragmentShader = `
+    precision mediump float;
+    
+    uniform float cameraY;
+    uniform vec2 resolution;
+    
+    void main() {
+        // Convert pixel position to 0-1 range
+        vec2 uv = gl_FragCoord.xy / resolution.xy;
+        
+        // Create three color zones based on camera height
+        vec3 skyColor = vec3(0.4, 0.6, 1.0);    // Blue
+        vec3 midColor = vec3(0.8, 0.3, 0.5);    // Purple
+        vec3 highColor = vec3(0.1, 0.1, 0.2);   // Dark blue
+        
+        // Mix colors based on vertical position and camera
+        float heightFactor = uv.y - (cameraY / 10000.0);
+        vec3 finalColor;
+        
+        if (heightFactor < 0.33) {
+            finalColor = mix(skyColor, midColor, heightFactor * 3.0);
+        } else if (heightFactor < 0.66) {
+            finalColor = mix(midColor, highColor, (heightFactor - 0.33) * 3.0);
+        } else {
+            finalColor = highColor;
+        }
+        
+        gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `;
+
+  const baseShader = new Phaser.Display.BaseShader("bg1", fragmentShader);
+
+  const shaderGameObject = this.add.shader(baseShader, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT);
+
+  shaderGameObject.setUniform("resolution.x", GAME_WIDTH);
+  shaderGameObject.setUniform("resolution.y", GAME_HEIGHT);
+  shaderGameObject.setUniform("cameraY", 0);
+
+  this.events.on("update", () => {
+    shaderGameObject.setUniform("cameraY", this.cameras.main.scrollY);
+  });
 
   initState({
     platformGroup: initPlatforms(this),
