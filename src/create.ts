@@ -14,6 +14,7 @@ export function create(this: Scene): void {
     scoreText: this.add.text(16, 16, "Score: 0", { fontSize: "32px", color: "#000" }).setScrollFactor(0),
     bottomPlatformGroup: createBottomPlatform(this),
     score: 0,
+    hasJumped: false,
   });
 
   addCollisions(this);
@@ -116,7 +117,7 @@ const addCollisions = (scene: Scene) => {
   scene.physics.add.collider(state.player, state.platformGroup);
   scene.physics.add.collider(state.player, state.movingPlatformGroup);
 
-  // Add collision between player and lava
+  // Add collision between player and bottomPlatformGroup
   scene.physics.add.collider(state.player, state.bottomPlatformGroup, () => {
     scene.physics.pause(); // Pause the physics engine
     state.player.setTint(0xff0000); // Change the player's color to red
@@ -126,6 +127,9 @@ const addCollisions = (scene: Scene) => {
     restartButton.setOrigin(0.5, 0.5);
     restartButton.setInteractive(); // Allow the button to be clicked
     restartButton.on("pointerdown", () => {
+      state.hasJumped = false;
+      state.score = 0;
+      state.scoreText.setText("Score: 0");
       scene.scene.restart();
     });
   });

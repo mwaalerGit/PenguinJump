@@ -6,6 +6,7 @@ export type GameState = {
   platformGroup: PlatformGroup;
   movingPlatformGroup: MovingPlatformGroup;
   bottomPlatformGroup: PlatformGroup;
+  bottomPlatform: Player;
   scoreText: ScoreText;
   score: number;
 };
