@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 type Platform = Phaser.Physics.Arcade.StaticGroup;
 type Player = Phaser.Physics.Arcade.Sprite;
+type MovingPlatform = Phaser.Physics.Arcade.Image;
 
 type CursorKeys = Phaser.Types.Input.Keyboard.CursorKeys;
 
@@ -14,6 +15,7 @@ const MIN_DISTANCE_Y = 50;
 const MAX_DISTANCE_Y = 100;
 const MIN_DISTANCE_X = 50;
 const MAX_DISTANCE_X = 200;
+const MAX_SCORE = MAP_HEIGHT / 10;
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
@@ -36,13 +38,15 @@ const config: Phaser.Types.Core.GameConfig = {
 let player: Player;
 let cursors: CursorKeys;
 let platforms: Platform;
+let scoreText: Phaser.GameObjects.Text;
+let score = 0;
 
 const game = new Phaser.Game(config);
 
 function preload(this: Phaser.Scene): void {
     this.load.image('background', '/assests/background.jpg');
-    this.load.image('platform', '/assests/platform.jpg');
-    this.load.image('platform2', '/assests/platform.png');
+    this.load.image('platform', '/assests/tundraCenter.png');
+    this.load.image('platform2', '/assests/tundraCenter.png');
     this.load.image('platformRed', '/assests/platformRed.png');
     this.load.image('penguin', '/assests/penguinSpriteIdle.png');
     this.load.spritesheet('penguinWalk', '/assests/penguinWalk.png', { frameWidth: 32, frameHeight: 32 });
@@ -54,13 +58,17 @@ function create(this: Phaser.Scene): void {
 
     // Add platforms
     platforms = this.physics.add.staticGroup();
+    
+
     generatePlatforms(this);
+    const movingPlatforms = generateMovingPlatforms(this);
 
     // Add player
-    player = this.physics.add.sprite(200, MAP_HEIGHT-200, 'penguin'); // Start the player near the bottom of the map
+    player = this.physics.add.sprite(200, MAP_HEIGHT-40, 'penguin'); // Start the player near the bottom of the map
     player.setCollideWorldBounds(true);
     player.setBounce(0.0);
     this.physics.add.collider(player, platforms);
+    this.physics.add.collider(player, movingPlatforms);
 
     // Add lava
     const redPlatforms = this.physics.add.staticGroup();
@@ -98,6 +106,13 @@ function create(this: Phaser.Scene): void {
         frameRate: 10,
         repeat: -1
     });
+    // Add score text
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', color: '#000' }).setScrollFactor(0);
+
+    // Add collision detection between the player and the moving platforms
+    // movingPlatforms.forEach(movingPlatform => {
+    //     this.physics.add.collider(player, movingPlatform);
+    // });
 }
 
 function update(this: Phaser.Scene): void {
@@ -121,29 +136,25 @@ function update(this: Phaser.Scene): void {
         this.cameras.main.scrollY = player.y - 200;
     }
 
-    // Check if the player has fallen below the visible screen area
-    if (player.y >= GAME_HEIGHT+10) {
-        this.scene.restart(); // Restart the scene
-    }
-    
+    // Update score based on player's y-coordinate
+    score = Math.min(MAX_SCORE, Math.max(score, Math.floor((MAP_HEIGHT - player.y) / 10)));
+    scoreText.setText('Score: ' + score);
 }
 
 function generatePlatforms(scene: Phaser.Scene): void {
 
     // Create the first platform at a fixed position
-    const firstPlatform = platforms.create(200, MAP_HEIGHT-100, 'platform2');
+    const firstPlatform = platforms.create(200, MAP_HEIGHT-10, 'platform2');
     firstPlatform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
     firstPlatform.refreshBody(); // Refresh the physics body to match the new size
 
     const lastPlatform = platforms.create(200, MAP_HEIGHT - (MAP_HEIGHT - 100), 'platform2');
     lastPlatform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
-    lastPlatform.refreshBody(); // Refresh the physics body to match the new size       
-
-    let lastPlatformY = MAP_HEIGHT-100;
-    let lastPlatformX = 200;
+    lastPlatform.refreshBody(); // Refresh the physics body to match the new size
 
     // Generate platforms with static positions 
     const fixedPositions = [
+        { x: 250, y: 500 },
         { x: 100, y: 400 },
         { x: 250, y: 300 },
         { x: 350, y: 200 },
@@ -154,7 +165,6 @@ function generatePlatforms(scene: Phaser.Scene): void {
         platform.setDisplaySize(100, 20); // Set the width to 100 and height to 20
         platform.refreshBody(); // Refresh the physics body to match the new size
     });
-
 
     // for (let i = 1; i < PLATFORM_COUNT; i++) {
     //     const posY = lastPlatformY - Phaser.Math.Between(MIN_DISTANCE_Y, MAX_DISTANCE_Y);
@@ -170,4 +180,37 @@ function generatePlatforms(scene: Phaser.Scene): void {
     //     lastPlatformY = posY;
     //     lastPlatformX = posX;
     // }
+}
+
+function generateMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
+    const movingPlatforms = scene.physics.add.group({
+        allowGravity: false,
+        immovable: true,
+        bounceX: 0,
+        bounceY: 0,
+        dragX: 0,
+        dragY: 0
+    });
+
+    const movingPlatformRedPositions = [
+        { x: 150, y: 450 },
+        { x: 250, y: 350 }
+    ];
+
+    movingPlatformRedPositions.forEach(pos => {
+        const movingPlatformRed = scene.physics.add.image(pos.x, pos.y, 'platformRed');
+        movingPlatformRed.setDisplaySize(10, 100);
+        movingPlatformRed.refreshBody();
+        scene.tweens.add({
+            targets: movingPlatformRed,
+            x: pos.x + GAME_WIDTH / 2,
+            ease: 'Linear',
+            duration: 3000,
+            yoyo: true,
+            repeat: -1
+        });
+        movingPlatforms.add(movingPlatformRed);
+    });
+
+    return movingPlatforms;
 }
