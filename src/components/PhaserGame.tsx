@@ -6,12 +6,12 @@ import { GAME_HEIGHT, GAME_WIDTH } from "../game/utils";
 import { update } from "../game/update";
 
 export default function PhaserGame() {
-  const game = useRef<HTMLCanvasElement>(null);
+  const gameRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (!game.current) return;
+    if (!gameRef.current) return;
 
-    new Phaser.Game({
+    const game = new Phaser.Game({
       type: Phaser.WEBGL,
       canvas: document.getElementById("game") as HTMLCanvasElement,
       width: GAME_WIDTH,
@@ -29,7 +29,11 @@ export default function PhaserGame() {
         update,
       },
     });
-  }, [game]);
 
-  return <canvas autoFocus ref={game} id="game" />;
+    return () => {
+      game.destroy(false);
+    };
+  }, [gameRef]);
+
+  return <canvas ref={gameRef} id="game" />;
 }
