@@ -195,6 +195,12 @@ function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
       delay: 1500,
       loop: true,
       callback: () => {
+        if (movingPlatform.body.velocity.x === 0) {
+          movingPlatform.setX(x);
+          movingPlatform.setY(y);
+          movingPlatform.setVelocityX(100);
+          return;
+        }
         movingPlatform.setVelocityX(-movingPlatform.body.velocity.x);
       },
     });
