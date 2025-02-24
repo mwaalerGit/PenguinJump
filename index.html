@@ -6,9 +6,17 @@
     <title>Penguin Jump</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <link rel="icon" href="./assests/favicon.png" type="image/x-icon">
+    <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
-    <h1>Penguin Jump</h1>
-    <script type="module" src="/src/main.ts"></script>  <!-- Link your game script -->
+    <div style="display: flex; gap: 20px;">
+        <div>
+            <h1>Penguin Jump</h1>
+            <canvas id="game"></canvas>
+        </div>
+        <div id="leaderboard">
+            <h1>Leaderboard</h1>
+        </div>
+    </div>
 </body>
 </html>

@@ -252,17 +252,7 @@ const handlePlayerDeath = (scene: Scene) => {
   scene.cameras.main.shake(500, 0.005);
 
   // Create and add game over screen
-  const gameOverScreen = new GameOverScreen(scene, state.score, (username: string) => {
-    // TODO: Save username and score to leaderboard
-    handleRestart(scene);
-  });
-
+  const gameOverScreen = new GameOverScreen(scene, state.score);
   scene.add.existing(gameOverScreen);
-};
 
-const handleRestart = (scene: Scene) => {
-  state.hasJumped = false;
-  state.score = 0;
-  state.scoreText.setText("Score: 0");
-  scene.scene.restart();
 };

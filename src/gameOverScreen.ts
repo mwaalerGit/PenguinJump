@@ -1,15 +1,16 @@
 import { Scene } from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT } from "./utils";
+import { GAME_WIDTH, GAME_HEIGHT, handleRestart } from "./utils";
+
+import { state } from "./state";
+import { saveScore, updateLeaderboard } from "./leaderboard";
 
 export class GameOverScreen extends Phaser.GameObjects.Container {
   private username = "";
   private usernameText: Phaser.GameObjects.Text;
   private usernamePrompt: Phaser.GameObjects.Text;
-  private onSubmit: (username: string) => void;
 
-  constructor(scene: Scene, score: number, onSubmit: (username: string) => void) {
+  constructor(scene: Scene, score: number) {
     super(scene, 0, 0);
-    this.onSubmit = onSubmit;
     this.setScrollFactor(0);
 
     // Add dark overlay
@@ -113,9 +114,12 @@ export class GameOverScreen extends Phaser.GameObjects.Container {
 
   private handleSubmit() {
     if (this.username.trim()) {
-      this.onSubmit(this.username);
+        saveScore(this.username.trim(), state.score);
+        updateLeaderboard();
+        // console.log("Score added to leaderboard!", this.username, state.score);
+        handleRestart(this.scene);
     } else {
-      this.usernamePrompt.setText("Please enter a name!").setColor("#ff0000");
+        this.usernamePrompt.setText("Please enter a name!").setColor("#ff0000");
     }
   }
 }
