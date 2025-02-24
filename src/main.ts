@@ -6,6 +6,7 @@ import { update } from "./update";
 
 new Phaser.Game({
   type: Phaser.WEBGL,
+
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   physics: {

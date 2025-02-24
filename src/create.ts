@@ -4,67 +4,6 @@ import { initState, state } from "./state";
 import { GameOverScreen } from "./gameOverScreen";
 
 export function create(this: Scene): void {
-  const fragmentShader = `
-  precision mediump float;
-
-  uniform float cameraY;
-  uniform float time;
-  uniform vec2 resolution;
-
-  // Pseudo-random function
-  float random(vec2 st) {
-      return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-  }
-
-  // 2D noise
-  float noise(vec2 st) {
-      vec2 i = floor(st);
-      vec2 f = fract(st);
-
-      // Four corners in 2D of a tile
-      float a = random(i);
-      float b = random(i + vec2(1.0, 0.0));
-      float c = random(i + vec2(0.0, 1.0));
-      float d = random(i + vec2(1.0, 1.0));
-
-      // Smooth interpolation
-      vec2 u = f * f * (3.0 - 2.0 * f);
-
-      return mix(a, b, u.x) +
-              (c - a)* u.y * (1.0 - u.x) +
-              (d - b) * u.x * u.y;
-  }
-
-  void main() {
-      // Normalized coordinates
-      vec2 uv = gl_FragCoord.xy/resolution.xy;
-      float normalizedY = cameraY / 600.0;
-
-      vec3 topColor = vec3(0.45, 0.5, 1.0);
-      vec3 middleColor = vec3(0.3, 0.4, 0.6);
-      vec3 bottomColor = vec3(0.1, 0.04, 0.08);
-      
-      // Add some moving noise
-      float noiseScale = 4.0;
-      float noiseMorphSpeed = time * 0.25;
-      float timeScale = normalizedY * 0.5;
-      float noiseIntensity = 0.4 - (1.0 - normalizedY) * 0.2;
-      float noiseValue = noise(vec2(uv.x * noiseScale + noiseMorphSpeed, (uv.y + timeScale) * noiseScale + noiseMorphSpeed)) * noiseIntensity;
-      
-      vec3 color;
-      if (normalizedY < 0.5) {
-          color = mix(topColor, middleColor, normalizedY * 2.0);
-      } else {
-          color = mix(middleColor, bottomColor, (normalizedY - 0.5) * 2.0);
-      }
-      
-      // Add noise to the final color
-      color += vec3(noiseValue);
-      
-      gl_FragColor = vec4(color, 1.0);
-  }
-`;
-
   const baseShader = new Phaser.Display.BaseShader("bg1", fragmentShader, undefined, {
     cameraY: { type: "1f", value: 0.0 },
     resolution: { type: "2f", value: { x: GAME_WIDTH, y: GAME_HEIGHT } },
@@ -176,29 +115,39 @@ function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
 
   // Constants for moving platform generation
   const PLATFORM_COUNT = MAP_HEIGHT / 200;
-  const MIN_HEIGHT = 100;
-  const MAX_HEIGHT = MAP_HEIGHT - 100;
+  const PLATFORM_MIN_Y = 100;
+  const PLATFORM_MAX_Y = MAP_HEIGHT - 100;
   const PLATFORM_WIDTH = 70;
+  const PLATFORM_HEIGHT = 20;
+  const PLATFORM_VELOCITY = 100;
+  const PLATFORM_TURN_DELAY = 1500;
 
   for (let i = 0; i < PLATFORM_COUNT; i++) {
-    const y = rng.between(MIN_HEIGHT, MAX_HEIGHT);
-    const x = rng.between(PLATFORM_WIDTH / 2, GAME_WIDTH - PLATFORM_WIDTH / 2);
+    const horizontalOrVertical = rng.between(0, 1);
+
+    // Flip width and height if the platform is vertical
+    const { width, height } = horizontalOrVertical === 0 ? { width: PLATFORM_WIDTH, height: PLATFORM_HEIGHT } : { width: PLATFORM_HEIGHT, height: PLATFORM_WIDTH };
+
+    const y = rng.between(PLATFORM_MIN_Y, PLATFORM_MAX_Y);
+    const x = rng.between(width + 0, GAME_WIDTH - width / 2);
 
     const movingPlatform = scene.physics.add.image(x, y, "platformRed");
-    movingPlatform.setDisplaySize(PLATFORM_WIDTH, 20);
+
+    movingPlatform.setDisplaySize(width, height);
     movingPlatform.setImmovable(true);
     movingPlatform.setPushable(false);
     movingPlatform.setCollideWorldBounds(false);
     movingPlatform.refreshBody();
 
     scene.time.addEvent({
-      delay: 1500,
+      delay: PLATFORM_TURN_DELAY,
       loop: true,
       callback: () => {
+        // Reset the platform if it's not moving
         if (movingPlatform.body.velocity.x === 0) {
           movingPlatform.setX(x);
           movingPlatform.setY(y);
-          movingPlatform.setVelocityX(100);
+          movingPlatform.setVelocityX(PLATFORM_VELOCITY);
           return;
         }
         movingPlatform.setVelocityX(-movingPlatform.body.velocity.x);
@@ -208,7 +157,7 @@ function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
     movingPlatforms.add(movingPlatform);
 
     // Must be called after adding the platform to the group
-    movingPlatform.setVelocityX(100);
+    movingPlatform.setVelocityX(PLATFORM_VELOCITY);
   }
 
   return movingPlatforms;
@@ -258,7 +207,7 @@ const handlePlayerDeath = (scene: Scene) => {
   scene.cameras.main.shake(500, 0.005);
 
   // Create and add game over screen
-  const gameOverScreen = new GameOverScreen(scene, state.score, (username: string) => {
+  const gameOverScreen = new GameOverScreen(scene, state.score, (_username: string) => {
     // TODO: Save username and score to leaderboard
     handleRestart(scene);
   });
@@ -272,3 +221,64 @@ const handleRestart = (scene: Scene) => {
   state.scoreText.setText("Score: 0");
   scene.scene.restart();
 };
+
+const fragmentShader = `
+  precision mediump float;
+
+  uniform float cameraY;
+  uniform float time;
+  uniform vec2 resolution;
+
+  // Pseudo-random function
+  float random(vec2 st) {
+      return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+  }
+
+  // 2D noise
+  float noise(vec2 st) {
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+
+      // Four corners in 2D of a tile
+      float a = random(i);
+      float b = random(i + vec2(1.0, 0.0));
+      float c = random(i + vec2(0.0, 1.0));
+      float d = random(i + vec2(1.0, 1.0));
+
+      // Smooth interpolation
+      vec2 u = f * f * (3.0 - 2.0 * f);
+
+      return mix(a, b, u.x) +
+              (c - a)* u.y * (1.0 - u.x) +
+              (d - b) * u.x * u.y;
+  }
+
+  void main() {
+      // Normalized coordinates
+      vec2 uv = gl_FragCoord.xy/resolution.xy;
+      float normalizedY = cameraY / 600.0;
+
+      vec3 topColor = vec3(0.45, 0.5, 1.0);
+      vec3 middleColor = vec3(0.3, 0.4, 0.6);
+      vec3 bottomColor = vec3(0.1, 0.04, 0.08);
+      
+      // Add some moving noise
+      float noiseScale = 4.0;
+      float noiseMorphSpeed = time * 0.25;
+      float timeScale = normalizedY * 0.5;
+      float noiseIntensity = 0.4 - (1.0 - normalizedY) * 0.2;
+      float noiseValue = noise(vec2(uv.x * noiseScale + noiseMorphSpeed, (uv.y + timeScale) * noiseScale + noiseMorphSpeed)) * noiseIntensity;
+      
+      vec3 color;
+      if (normalizedY < 0.5) {
+          color = mix(topColor, middleColor, normalizedY * 2.0);
+      } else {
+          color = mix(middleColor, bottomColor, (normalizedY - 0.5) * 2.0);
+      }
+      
+      // Add noise to the final color
+      color += vec3(noiseValue);
+      
+      gl_FragColor = vec4(color, 1.0);
+  }
+`;
