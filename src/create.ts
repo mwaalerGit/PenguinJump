@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT } from "./utils";
 import { initState, state } from "./state";
+import { GameOverScreen } from "./gameOverScreen";
 
 export function create(this: Scene): void {
   const fragmentShader = `
@@ -215,18 +216,30 @@ const addCollisions = (scene: Scene) => {
 
   // Add collision between player and bottomPlatformGroup
   scene.physics.add.collider(state.player, state.bottomPlatformGroup, () => {
-    scene.physics.pause(); // Pause the physics engine
-    state.player.setTint(0xff0000); // Change the player's color to red
-    state.player.scale = 0.75;
-    // Add a restart button
-    const restartButton = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Restart", { fontSize: "32px", color: "#000" });
-    restartButton.setOrigin(0.5, 0.5);
-    restartButton.setInteractive(); // Allow the button to be clicked
-    restartButton.on("pointerdown", () => {
-      state.hasJumped = false;
-      state.score = 0;
-      state.scoreText.setText("Score: 0");
-      scene.scene.restart();
-    });
+    handlePlayerDeath(scene);
   });
+};
+
+const handlePlayerDeath = (scene: Scene) => {
+  scene.physics.pause();
+  state.player.setTint(0xff0000);
+  state.player.scale = 0.75;
+
+  // Add death effects
+  scene.cameras.main.shake(500, 0.005);
+  
+  // Create and add game over screen
+  const gameOverScreen = new GameOverScreen(scene, state.score, (username: string) => {
+    // TODO: Save username and score to leaderboard
+    handleRestart(scene);
+  });
+  
+  scene.add.existing(gameOverScreen);
+};
+
+const handleRestart = (scene: Scene) => {
+  state.hasJumped = false;
+  state.score = 0;
+  state.scoreText.setText("Score: 0");
+  scene.scene.restart();
 };
