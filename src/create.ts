@@ -4,7 +4,7 @@ import { initState, state } from "./state";
 import { GameOverScreen } from "./gameOverScreen";
 
 export function create(this: Scene): void {
-  const baseShader = new Phaser.Display.BaseShader("bg1", fragmentShader, undefined, {
+  const baseShader = new Phaser.Display.BaseShader("bg1", backgroundFragmentShader, undefined, {
     cameraY: { type: "1f", value: 0.0 },
     resolution: { type: "2f", value: { x: GAME_WIDTH, y: GAME_HEIGHT } },
     time: { type: "1f", value: 0.0 },
@@ -207,22 +207,11 @@ const handlePlayerDeath = (scene: Scene) => {
   scene.cameras.main.shake(500, 0.005);
 
   // Create and add game over screen
-  const gameOverScreen = new GameOverScreen(scene, state.score, (_username: string) => {
-    // TODO: Save username and score to leaderboard
-    handleRestart(scene);
-  });
-
+  const gameOverScreen = new GameOverScreen(scene, state.score);
   scene.add.existing(gameOverScreen);
 };
 
-const handleRestart = (scene: Scene) => {
-  state.hasJumped = false;
-  state.score = 0;
-  state.scoreText.setText("Score: 0");
-  scene.scene.restart();
-};
-
-const fragmentShader = `
+const backgroundFragmentShader = `
   precision mediump float;
 
   uniform float cameraY;
