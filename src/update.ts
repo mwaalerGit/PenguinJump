@@ -1,6 +1,6 @@
 import { Scene } from "phaser";
 import { state } from "./state";
-import { CursorKeys, MAP_HEIGHT, MAX_SCORE, Player, GAME_WIDTH } from "./utils";
+import { CursorKeys, MAP_HEIGHT, MAX_SCORE, Player, GAME_WIDTH, ON_MOVING_PLATFORM_KEY, DAMPING_FACTOR, MAX_SPEED, MOVEMENT_SPEED } from "./utils";
 
 export function update(this: Scene): void {
   const { cursors, player, scoreText, score, hasJumped } = state;
@@ -23,19 +23,23 @@ export function update(this: Scene): void {
 }
 
 const handlePlayerMovement = (cursors: CursorKeys, player: Player) => {
-  if (cursors.left?.isDown) {
-    player.setVelocityX(-160);
-    player.anims.play("walk", true);
-  } else if (cursors.right?.isDown) {
-    player.setVelocityX(160);
-    player.anims.play("walk", true);
-  } else {
-    player.anims.play("walk", false);
-    player.setVelocityX(0);
-  }
+  const playerVelocity = player.body!.velocity;
+  let newVelocityX = playerVelocity.x;
 
-  if (cursors.space?.isDown) {
-    //|| cursors.up?.isDown) && player?.body?.blocked.down) {
+  if (cursors.left?.isDown) newVelocityX -= MOVEMENT_SPEED;
+  if (cursors.right?.isDown) newVelocityX += MOVEMENT_SPEED;
+
+  newVelocityX = Math.min(Math.max(newVelocityX, -MAX_SPEED), MAX_SPEED);
+
+  const isStandingOnMovingPlatform = player.data.get(ON_MOVING_PLATFORM_KEY);
+  if (player.body?.blocked.down && !isStandingOnMovingPlatform) newVelocityX *= DAMPING_FACTOR;
+
+  player.setVelocityX(newVelocityX);
+
+  if (cursors.left.isDown || cursors.right.isDown) player.anims.play("walk", true);
+  else player.anims.play("walk", false);
+
+  if ((cursors.space?.isDown || cursors.up?.isDown) && player?.body?.blocked.down) {
     player.setVelocityY(-250);
     state.hasJumped = true;
   }

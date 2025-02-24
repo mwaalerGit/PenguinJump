@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT } from "./utils";
+import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT, ON_MOVING_PLATFORM_KEY } from "./utils";
 import { initState, state } from "./state";
 
 export function create(this: Scene): void {
@@ -110,6 +110,9 @@ const initPlayer = (scene: Scene) => {
   const player = scene.physics.add.sprite(200, MAP_HEIGHT - 90, "penguin");
   player.setCollideWorldBounds(true);
   player.setBounce(0.0);
+  player.setDataEnabled();
+  player.setImmovable(false);
+  player.setPushable(true);
 
   return player;
 };
@@ -160,7 +163,7 @@ const initPlatforms = (scene: Scene) => {
 function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
   const movingPlatforms = scene.physics.add.group({
     allowGravity: false,
-    immovable: true,
+    immovable: false,
     bounceX: 0,
     bounceY: 0,
     dragX: 0,
@@ -182,19 +185,23 @@ function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
 
     const movingPlatform = scene.physics.add.image(x, y, "platformRed");
     movingPlatform.setDisplaySize(PLATFORM_WIDTH, 20);
-    movingPlatform.refreshBody();
     movingPlatform.setImmovable(true);
+    movingPlatform.setPushable(false);
+    movingPlatform.setCollideWorldBounds(false);
+    movingPlatform.refreshBody();
 
-    scene.tweens.add({
-      targets: movingPlatform,
-      x: x + GAME_WIDTH / 3,
-      ease: "Linear",
-      duration: 2000,
-      yoyo: true,
-      repeat: -1,
+    scene.time.addEvent({
+      delay: 1500,
+      loop: true,
+      callback: () => {
+        movingPlatform.setVelocityX(-movingPlatform.body.velocity.x);
+      },
     });
 
     movingPlatforms.add(movingPlatform);
+
+    // Must be called after adding the platform to the group
+    movingPlatform.setVelocityX(100);
   }
 
   return movingPlatforms;
@@ -210,8 +217,24 @@ const createBottomPlatform = (scene: Scene) => {
 };
 
 const addCollisions = (scene: Scene) => {
-  scene.physics.add.collider(state.player, state.platformGroup);
-  scene.physics.add.collider(state.player, state.movingPlatformGroup);
+  scene.physics.add.collider(state.player, state.platformGroup, () => {
+    state.player.data.set(ON_MOVING_PLATFORM_KEY, false);
+  });
+
+  scene.physics.add.collider(state.player, state.movingPlatformGroup, (o1, o2) => {
+    const player = o1 as Phaser.Physics.Arcade.Sprite;
+    const platform = o2 as Phaser.Physics.Arcade.Image;
+
+    const playerIsMoving = state.cursors.left.isDown || state.cursors.right.isDown;
+
+    if (player.y < platform.y && !playerIsMoving) {
+      player.data.set(ON_MOVING_PLATFORM_KEY, true);
+
+      const platformVelocity = platform.body!.velocity;
+
+      player.setVelocityX(platformVelocity.x);
+    }
+  });
 
   // Add collision between player and bottomPlatformGroup
   scene.physics.add.collider(state.player, state.bottomPlatformGroup, () => {
