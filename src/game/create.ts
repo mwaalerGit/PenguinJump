@@ -61,7 +61,7 @@ const initPlatforms = (scene: Scene) => {
   // Constants for platform generation
   const MIN_DISTANCE_Y = 60;
   const MAX_DISTANCE_Y = 100;
-  const MIN_DISTANCE_X = 50;
+  // const MIN_DISTANCE_X = 50;
   const MAX_DISTANCE_X = 150;
   const PLATFORM_COUNT = 74;
   const PLATFORM_WIDTH = 100;
