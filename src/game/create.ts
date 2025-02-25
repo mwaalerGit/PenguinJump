@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT, ON_MOVING_PLATFORM_KEY } from "./utils";
+import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT, ON_ICE_PLATFORM_KEY, ON_MOVING_PLATFORM_KEY } from "./utils";
 import { initState, state } from "./state";
 import { GameOverScreen } from "./gameOverScreen";
 import { backgroundShader } from "./shaders/background";
@@ -147,7 +147,7 @@ const createIcePlatform = (scene: Scene, group: Phaser.Physics.Arcade.StaticGrou
 const getWeightedPlatformType = (rng: Phaser.Math.RandomDataGenerator): PlatformType => {
   const total = Object.values(PLATFORM_WEIGHTS).reduce((a, b) => a + b, 0);
   let random = rng.between(1, total);
-  
+  console.log('Random value:', random, 'Total:', total); // Debug log
   for (const [type, weight] of Object.entries(PLATFORM_WEIGHTS)) {
     random -= weight;
     if (random <= 0) {
@@ -168,13 +168,19 @@ const createBottomPlatform = (scene: Scene) => {
 };
 
 const addCollisions = (scene: Scene) => {
-  scene.physics.add.collider(state.player, state.platformGroup, () => {
-    state.player.data.set(ON_MOVING_PLATFORM_KEY, false);
+  scene.physics.add.collider(state.player, state.platformGroup, (obj1, obj2) => {
+    const player = obj1 as Phaser.Physics.Arcade.Sprite;
+    const platform = obj2 as Phaser.Physics.Arcade.Sprite;
+    
+    player.data.set(ON_MOVING_PLATFORM_KEY, false);
+    player.data.set(ON_ICE_PLATFORM_KEY, platform.getData('isIce'));
   });
 
   scene.physics.add.collider(state.player, state.movingPlatformGroup, (o1, o2) => {
     const player = o1 as Phaser.Physics.Arcade.Sprite;
     const platform = o2 as Phaser.Physics.Arcade.Image;
+
+    player.data.set('onIce', platform.getData('isIce'));
 
     const playerIsMoving = state.cursors.left.isDown || state.cursors.right.isDown;
 

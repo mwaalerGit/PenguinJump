@@ -9,8 +9,10 @@ export const MAX_SCORE = MAP_HEIGHT / 10;
 
 // Player movement
 export const ON_MOVING_PLATFORM_KEY = "onMovingPlatform";
+export const ON_ICE_PLATFORM_KEY = "onIcePlatform";
 export const MOVEMENT_SPEED = 40;
 export const DAMPING_FACTOR = 0.8;
+export const ICE_DAMPING_FACTOR = 0.95; // Higher value means less friction
 export const MAX_SPEED = 100;
 
 export type Platforms = Phaser.Physics.Arcade.StaticGroup;

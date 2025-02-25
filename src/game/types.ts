@@ -18,7 +18,7 @@ export enum PlatformType {
 
 export const PLATFORM_WEIGHTS = {
   [PlatformType.NORMAL]: 60,
-  [PlatformType.MOVING]: 20,
+  [PlatformType.MOVING]: 100,
   [PlatformType.ICE]: 20
 };
 
