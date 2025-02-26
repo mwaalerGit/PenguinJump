@@ -31,10 +31,12 @@ const handlePlayerMovement = (cursors: CursorKeys, player: Player) => {
 
   newVelocityX = Math.min(Math.max(newVelocityX, -MAX_SPEED), MAX_SPEED);
 
-  // Apply different damping based on platform type
-  if (player.body?.blocked.down) {
-    const dampingFactor = player.data.get(ON_ICE_PLATFORM_KEY) ? ICE_DAMPING_FACTOR : DAMPING_FACTOR;
-    newVelocityX *= dampingFactor;
+  // Only apply drag when not on moving platform
+  if (!player.data.get(ON_MOVING_PLATFORM_KEY)) {
+    if (player.body?.blocked.down) {
+      const dampingFactor = player.data.get(ON_ICE_PLATFORM_KEY) ? ICE_DAMPING_FACTOR : DAMPING_FACTOR;
+      newVelocityX *= dampingFactor;
+    }
   }
 
   player.setVelocityX(newVelocityX);

@@ -67,7 +67,6 @@ const initPlatforms = (scene: Scene) => {
   // Create a seeded RNG
   const rng = new Phaser.Math.RandomDataGenerator(["penguin-jump-v1"]);
 
-  // Constants for platform generation
   const MIN_DISTANCE_Y = 60;
   const MAX_DISTANCE_Y = 100;
   const MIN_DISTANCE_X = 50;
@@ -118,21 +117,27 @@ const createNormalPlatform = (scene: Scene, group: Phaser.Physics.Arcade.StaticG
 
 const createMovingPlatform = (scene: Scene, group: Phaser.Physics.Arcade.Group, x: number, y: number) => {
   const config = PLATFORM_CONFIGS[PlatformType.MOVING];
-  const platform = scene.physics.add.image(x, y, config.texture);
+
+  const platform = group.create(x, y, config.texture);
   platform.setDisplaySize(config.width, config.height);
+  
   platform.setImmovable(true);
+  platform.allowGravity = false;
   platform.refreshBody();
 
-  scene.tweens.add({
-    targets: platform,
-    x: x + GAME_WIDTH/3,
-    ease: 'Linear',
-    duration: 2000,
-    yoyo: true,
-    repeat: -1
+  // Set initial velocity
+  const speed = 100;
+  platform.setVelocityX(speed);
+
+  // Add periodic velocity flip
+  scene.time.addEvent({
+    delay: 2000,
+    callback: () => {
+      platform.setVelocityX(-platform.body.velocity.x);
+    },
+    loop: true
   });
 
-  group.add(platform);
   return platform;
 };
 
