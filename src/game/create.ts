@@ -1,8 +1,11 @@
 import { Scene } from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT, ON_MOVING_PLATFORM_KEY } from "./utils";
+import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT, ON_ICE_PLATFORM_KEY, ON_MOVING_PLATFORM_KEY } from "./utils";
 import { initState, state } from "./state";
 import { GameOverScreen } from "./gameOverScreen";
 import { backgroundShader } from "./shaders/background";
+import { PlatformType, PLATFORM_CONFIGS, PLATFORM_WEIGHTS } from "./types";
+
+
 
 export function create(this: Scene): void {
   const shaderGameObject = this.add.shader(backgroundShader, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT * 1.2);
@@ -13,9 +16,11 @@ export function create(this: Scene): void {
     shaderGameObject.setUniform("time.value", this.time.now);
   });
 
+  const platforms = initPlatforms(this);
+
   initState({
-    platformGroup: initPlatforms(this),
-    movingPlatformGroup: initMovingPlatforms(this),
+    platformGroup: platforms.platforms,
+    movingPlatformGroup: platforms.movingPlatforms,
     player: initPlayer(this),
     cursors: this.input.keyboard!.createCursorKeys(),
     scoreText: this.add.text(16, 16, "Score: 0", { fontSize: "32px", color: "#000" }).setScrollFactor(0),
@@ -54,22 +59,22 @@ const initPlayer = (scene: Scene) => {
 
 const initPlatforms = (scene: Scene) => {
   const platforms = scene.physics.add.staticGroup();
+  const movingPlatforms = scene.physics.add.group({
+    allowGravity: false,
+    immovable: true
+  });
 
   // Create a seeded RNG
   const rng = new Phaser.Math.RandomDataGenerator(["penguin-jump-v1"]);
 
-  // Constants for platform generation
   const MIN_DISTANCE_Y = 60;
   const MAX_DISTANCE_Y = 100;
   // const MIN_DISTANCE_X = 50;
   const MAX_DISTANCE_X = 150;
   const PLATFORM_COUNT = 74;
-  const PLATFORM_WIDTH = 100;
 
   // Create the starting platform
-  const firstPlatform = platforms.create(200, MAP_HEIGHT - 50, "platform2");
-  firstPlatform.setDisplaySize(PLATFORM_WIDTH, 20);
-  firstPlatform.refreshBody();
+  createNormalPlatform(scene, platforms, 200, MAP_HEIGHT - 50, PLATFORM_CONFIGS[PlatformType.NORMAL].width);
 
   let lastX = 200;
   let lastY = MAP_HEIGHT - 50;
@@ -77,90 +82,96 @@ const initPlatforms = (scene: Scene) => {
   // Generate platforms with seeded random positions
   for (let i = 1; i < PLATFORM_COUNT; i++) {
     const y = lastY - rng.between(MIN_DISTANCE_Y, MAX_DISTANCE_Y);
-
-    const minX = Math.max(PLATFORM_WIDTH / 2, lastX - MAX_DISTANCE_X);
-    const maxX = Math.min(GAME_WIDTH - PLATFORM_WIDTH / 2, lastX + MAX_DISTANCE_X);
+    const minX = Math.max(PLATFORM_CONFIGS[PlatformType.NORMAL].width / 2, lastX - MAX_DISTANCE_X);
+    const maxX = Math.min(GAME_WIDTH - PLATFORM_CONFIGS[PlatformType.NORMAL].width / 2, lastX + MAX_DISTANCE_X);
     const x = rng.between(minX, maxX);
 
-    const platform = platforms.create(x, y, "platform");
-
-    const width = Math.max(50, PLATFORM_WIDTH - i * 0.5);
-    platform.setDisplaySize(width, 20);
-    platform.refreshBody();
+    // Determine platform type based on weights
+    const platformType = getWeightedPlatformType(rng);
+    
+    switch(platformType) {
+      case PlatformType.NORMAL:
+        createNormalPlatform(scene, platforms, x, y, PLATFORM_CONFIGS[PlatformType.NORMAL].width - i * 0.5);
+        break;
+      case PlatformType.MOVING:
+        createMovingPlatform(scene, movingPlatforms, x, y);
+        break;
+      case PlatformType.ICE:
+        createIcePlatform(scene, platforms, x, y, PLATFORM_CONFIGS[PlatformType.ICE].width - i * 0.5);
+        break;
+    }
 
     lastX = x;
     lastY = y;
   }
 
-  return platforms;
+  return { platforms, movingPlatforms };
 };
 
-function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
-  const movingPlatforms = scene.physics.add.group({
-    allowGravity: false,
-    immovable: false,
-    bounceX: 0,
-    bounceY: 0,
-    dragX: 0,
-    dragY: 0,
+const createNormalPlatform = (scene: Scene, group: Phaser.Physics.Arcade.StaticGroup, x: number, y: number, width: number) => {
+  const platform = group.create(x, y, PLATFORM_CONFIGS[PlatformType.NORMAL].texture);
+  platform.setDisplaySize(width, PLATFORM_CONFIGS[PlatformType.NORMAL].height);
+  platform.refreshBody();
+  return platform;
+};
+
+const createMovingPlatform = (scene: Scene, group: Phaser.Physics.Arcade.Group, x: number, y: number) => {
+  const config = PLATFORM_CONFIGS[PlatformType.MOVING];
+  const PLATFORM_TURN_DELAY = 2000;
+
+  const platform = group.create(x, y, config.texture);
+  platform.setDisplaySize(config.width, config.height);
+  
+  platform.setImmovable(true);
+  platform.allowGravity = false;
+  platform.refreshBody();
+
+  // Set initial velocity
+  const speed = 100;
+  platform.setVelocityX(speed);
+
+  // Add periodic velocity flip
+  scene.time.addEvent({
+    delay: PLATFORM_TURN_DELAY,
+    callback: () => {
+      if (platform.body.velocity.x === 0) {
+        platform.setX(x);
+        platform.setY(y);
+        platform.setVelocityX(platform.body.velocity.x + speed);
+        return;
+      }
+      platform.setVelocityX(-platform.body.velocity.x);
+    },
+    loop: true
   });
 
-  // Create a seeded RNG with a different seed for moving platforms
-  const rng = new Phaser.Math.RandomDataGenerator(["penguin-jump-moving-v4"]);
+  return platform;
+};
 
-  // Constants for moving platform generation
-  const PLATFORM_COUNT = MAP_HEIGHT / 200;
-  const PLATFORM_MIN_Y = 100;
-  const PLATFORM_MAX_Y = MAP_HEIGHT - 100;
-  const PLATFORM_WIDTH = 70;
-  const PLATFORM_HEIGHT = 20;
-  const PLATFORM_VELOCITY = 100;
-  const PLATFORM_TURN_DELAY = 1500;
+const createIcePlatform = (scene: Scene, group: Phaser.Physics.Arcade.StaticGroup, x: number, y: number, width: number) => {
+  const platform = group.create(x, y, PLATFORM_CONFIGS[PlatformType.ICE].texture);
+  platform.setDisplaySize(width, PLATFORM_CONFIGS[PlatformType.ICE].height);
+  platform.refreshBody();
+  platform.setData('isIce', true);
+  return platform;
+};
 
-  for (let i = 0; i < PLATFORM_COUNT; i++) {
-    const horizontalOrVertical = rng.between(0, 1);
-
-    // Flip width and height if the platform is vertical
-    const { width, height } = horizontalOrVertical === 0 ? { width: PLATFORM_WIDTH, height: PLATFORM_HEIGHT } : { width: PLATFORM_HEIGHT, height: PLATFORM_WIDTH };
-
-    const y = rng.between(PLATFORM_MIN_Y, PLATFORM_MAX_Y);
-    const x = rng.between(width + 0, GAME_WIDTH - width / 2);
-
-    const movingPlatform = scene.physics.add.image(x, y, "platformRed");
-
-    movingPlatform.setDisplaySize(width, height);
-    movingPlatform.setImmovable(true);
-    movingPlatform.setPushable(false);
-    movingPlatform.setCollideWorldBounds(false);
-    movingPlatform.refreshBody();
-
-    scene.time.addEvent({
-      delay: PLATFORM_TURN_DELAY,
-      loop: true,
-      callback: () => {
-        // Reset the platform if it's not moving
-        if (movingPlatform.body.velocity.x === 0) {
-          movingPlatform.setX(x);
-          movingPlatform.setY(y);
-          movingPlatform.setVelocityX(PLATFORM_VELOCITY);
-          return;
-        }
-        movingPlatform.setVelocityX(-movingPlatform.body.velocity.x);
-      },
-    });
-
-    movingPlatforms.add(movingPlatform);
-
-    // Must be called after adding the platform to the group
-    movingPlatform.setVelocityX(PLATFORM_VELOCITY);
+const getWeightedPlatformType = (rng: Phaser.Math.RandomDataGenerator): PlatformType => {
+  const total = Object.values(PLATFORM_WEIGHTS).reduce((a, b) => a + b, 0);
+  let random = rng.between(1, total);
+  for (const [type, weight] of Object.entries(PLATFORM_WEIGHTS)) {
+    random -= weight;
+    if (random <= 0) {
+      return type as PlatformType;
+    }
   }
-
-  return movingPlatforms;
-}
+  
+  return PlatformType.NORMAL; // Fallback
+};
 
 const createBottomPlatform = (scene: Scene) => {
   const bottomPlatformGroup = scene.physics.add.staticGroup();
-  const bottomPlatform = bottomPlatformGroup.create(200, MAP_HEIGHT, "platformRed");
+  const bottomPlatform = bottomPlatformGroup.create(GAME_WIDTH/2, MAP_HEIGHT, "platformRed");
   bottomPlatform.setDisplaySize(GAME_WIDTH, 20); // Set the width to 400 and height to 20
   bottomPlatform.refreshBody(); // Refresh the physics body to match the new size
 
@@ -168,13 +179,19 @@ const createBottomPlatform = (scene: Scene) => {
 };
 
 const addCollisions = (scene: Scene) => {
-  scene.physics.add.collider(state.player, state.platformGroup, () => {
-    state.player.data.set(ON_MOVING_PLATFORM_KEY, false);
+  scene.physics.add.collider(state.player, state.platformGroup, (obj1, obj2) => {
+    const player = obj1 as Phaser.Physics.Arcade.Sprite;
+    const platform = obj2 as Phaser.Physics.Arcade.Sprite;
+    
+    player.data.set(ON_MOVING_PLATFORM_KEY, false);
+    player.data.set(ON_ICE_PLATFORM_KEY, platform.getData('isIce'));
   });
 
   scene.physics.add.collider(state.player, state.movingPlatformGroup, (o1, o2) => {
     const player = o1 as Phaser.Physics.Arcade.Sprite;
     const platform = o2 as Phaser.Physics.Arcade.Image;
+
+    player.data.set(ON_ICE_PLATFORM_KEY, false);
 
     const playerIsMoving = state.cursors.left.isDown || state.cursors.right.isDown;
 
