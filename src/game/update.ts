@@ -10,12 +10,7 @@ export function update(this: Scene): void {
   adjustCameraPosition(this, player);
 
   if (hasJumped) {
-    const bottomPlatform = state.bottomPlatformGroup.getChildren()[0] as Phaser.Physics.Arcade.Sprite;
-    const currentHeight = bottomPlatform.displayHeight;
-    const newHeight = currentHeight + 0.1;
-    bottomPlatform.setDisplaySize(GAME_WIDTH, newHeight);
-    bottomPlatform.setY(MAP_HEIGHT - newHeight / 2); // Anchor the platform to the bottom of the screen
-    bottomPlatform.refreshBody();
+    elevateBottomPlatform();
   }
 
   state.score = Math.min(MAX_SCORE, Math.max(score, Math.floor((MAP_HEIGHT - player.y) / 10)));
@@ -49,4 +44,16 @@ const adjustCameraPosition = (scene: Scene, player: Player) => {
   if (player.y < scene.cameras.main.scrollY + 200) {
     scene.cameras.main.scrollY = player.y - 200;
   }
+};
+
+const elevateBottomPlatform = () => {
+  const bottomPlatform = state.bottomPlatformGroup.getChildren()[0] as Phaser.GameObjects.Shader;
+  const currentHeight = bottomPlatform.height;
+  const newHeight = currentHeight + 0.1;
+
+  bottomPlatform.setSize(GAME_WIDTH, newHeight);
+  bottomPlatform.y = MAP_HEIGHT - newHeight / 2;
+
+  const physicsBody = bottomPlatform.body as Phaser.Physics.Arcade.StaticBody;
+  physicsBody.y = MAP_HEIGHT - newHeight / 2;
 };

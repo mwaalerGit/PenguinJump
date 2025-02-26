@@ -3,15 +3,10 @@ import { GAME_HEIGHT, GAME_WIDTH, MAP_HEIGHT, ON_MOVING_PLATFORM_KEY } from "./u
 import { initState, state } from "./state";
 import { GameOverScreen } from "./gameOverScreen";
 import { backgroundShader } from "./shaders/background";
+import { bottomPlatformShader } from "./shaders/bottomPlatform";
 
 export function create(this: Scene): void {
-  const shaderGameObject = this.add.shader(backgroundShader, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT * 1.2);
-
-  this.events.on("update", () => {
-    shaderGameObject.y = this.cameras.main.scrollY + GAME_HEIGHT / 2;
-    shaderGameObject.setUniform("cameraY.value", this.cameras.main.scrollY);
-    shaderGameObject.setUniform("time.value", this.time.now);
-  });
+  initializeShaders(this);
 
   initState({
     platformGroup: initPlatforms(this),
@@ -95,6 +90,18 @@ const initPlatforms = (scene: Scene) => {
   return platforms;
 };
 
+function initializeShaders(scene: Scene) {
+  const bgShaderGameObject = scene.add.shader(backgroundShader, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT * 1.2);
+
+  bgShaderGameObject.setDepth(-1);
+
+  scene.events.on("update", () => {
+    bgShaderGameObject.y = scene.cameras.main.scrollY + GAME_HEIGHT / 2;
+    bgShaderGameObject.setUniform("cameraY.value", scene.cameras.main.scrollY);
+    bgShaderGameObject.setUniform("time.value", scene.time.now);
+  });
+}
+
 function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
   const movingPlatforms = scene.physics.add.group({
     allowGravity: false,
@@ -160,9 +167,16 @@ function initMovingPlatforms(scene: Phaser.Scene): Phaser.Physics.Arcade.Group {
 
 const createBottomPlatform = (scene: Scene) => {
   const bottomPlatformGroup = scene.physics.add.staticGroup();
-  const bottomPlatform = bottomPlatformGroup.create(200, MAP_HEIGHT, "platformRed");
-  bottomPlatform.setDisplaySize(GAME_WIDTH, 20); // Set the width to 400 and height to 20
-  bottomPlatform.refreshBody(); // Refresh the physics body to match the new size
+
+  const bottomPlatform = scene.add.shader(bottomPlatformShader, GAME_WIDTH / 2, MAP_HEIGHT, GAME_WIDTH, 20);
+
+  scene.events.on("update", () => {
+    bottomPlatform.setUniform("time.value", scene.time.now);
+    bottomPlatform.setUniform("resolution.value", { x: GAME_WIDTH, y: 20 });
+  });
+
+  const platformBody = scene.physics.add.existing(bottomPlatform, true);
+  bottomPlatformGroup.add(platformBody);
 
   return bottomPlatformGroup;
 };
