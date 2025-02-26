@@ -76,7 +76,6 @@ export class GameOverScreen extends Phaser.GameObjects.Container {
   private handleSubmit() {
     if (this.username.trim()) {
       saveScore(this.username.trim(), state.score);
-      // console.log("Score added to leaderboard!", this.username, state.score);
       handleRestart(this.scene);
     } else {
       this.usernamePrompt.setText("Please enter a name!").setColor("#ff0000");
