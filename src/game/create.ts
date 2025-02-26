@@ -117,6 +117,7 @@ const createNormalPlatform = (scene: Scene, group: Phaser.Physics.Arcade.StaticG
 
 const createMovingPlatform = (scene: Scene, group: Phaser.Physics.Arcade.Group, x: number, y: number) => {
   const config = PLATFORM_CONFIGS[PlatformType.MOVING];
+  const PLATFORM_TURN_DELAY = 2000;
 
   const platform = group.create(x, y, config.texture);
   platform.setDisplaySize(config.width, config.height);
@@ -131,8 +132,14 @@ const createMovingPlatform = (scene: Scene, group: Phaser.Physics.Arcade.Group, 
 
   // Add periodic velocity flip
   scene.time.addEvent({
-    delay: 2000,
+    delay: PLATFORM_TURN_DELAY,
     callback: () => {
+      if (platform.body.velocity.x === 0) {
+        platform.setX(x);
+        platform.setY(y);
+        platform.setVelocityX(platform.body.velocity.x + speed);
+        return;
+      }
       platform.setVelocityX(-platform.body.velocity.x);
     },
     loop: true
@@ -152,7 +159,6 @@ const createIcePlatform = (scene: Scene, group: Phaser.Physics.Arcade.StaticGrou
 const getWeightedPlatformType = (rng: Phaser.Math.RandomDataGenerator): PlatformType => {
   const total = Object.values(PLATFORM_WEIGHTS).reduce((a, b) => a + b, 0);
   let random = rng.between(1, total);
-  console.log('Random value:', random, 'Total:', total); // Debug log
   for (const [type, weight] of Object.entries(PLATFORM_WEIGHTS)) {
     random -= weight;
     if (random <= 0) {
@@ -185,7 +191,7 @@ const addCollisions = (scene: Scene) => {
     const player = o1 as Phaser.Physics.Arcade.Sprite;
     const platform = o2 as Phaser.Physics.Arcade.Image;
 
-    player.data.set('onIce', platform.getData('isIce'));
+    player.data.set(ON_ICE_PLATFORM_KEY, false);
 
     const playerIsMoving = state.cursors.left.isDown || state.cursors.right.isDown;
 
